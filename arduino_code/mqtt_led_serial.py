@@ -29,8 +29,7 @@ if ser.isOpen():
     print('The Arduino is Connected')
 
 
-def changeLEDStatus(status):
-    print(status)
+def changeLEDStatus(status): 
     status = int(status)
     buffer = [0xff, 0x55, 0x5, 0x0, 0x2, 0x22, 0x9, status]
     ser.write(ser.write(serial.to_bytes(buffer)))
