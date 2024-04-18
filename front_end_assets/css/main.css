@@ -1,0 +1,31 @@
+canvas { 
+    width: 100%;
+}
+
+#control_pannel {
+    text-align: center;
+}
+
+button, select {
+    font-size: 20px;
+    padding: 10px;
+    position: fixed;
+    top: 10px;
+    cursor: pointer; 
+
+}
+
+button{
+    right: 20px;
+} 
+select{
+    right:130px;
+    outline: none;
+}
+
+code{
+    color: white;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+}

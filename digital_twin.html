@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Babylon.js Example with GLB Model and WebSocket</title>
+    <script src="/front_end_assets/cdns/babylon.js"></script>
+    <script src="/front_end_assets/cdns/glTFFileLoader.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <link rel="stylesheet" href="/front_end_assets/css/main.css">
+</head>
+
+<body>
+    <canvas id="renderCanvas"></canvas>
+
+    <button id="playback">Playback</button>
+
+    <select name="" id="time">
+        <option value="5m">Now</option>
+        <option value="5m">1m</option>
+        <option value="5m">5m</option>
+        <option value="5m">10m</option>
+        <option value="5m">30m</option>
+        <option value="5m">1hr</option>
+        <option value="5m">24hr</option>
+    </select>
+
+    <code id="playback_time">Now</code>
+    <script>
+        // state variables
+        let led_value = 0;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Environment Setup
+            const canvas = document.getElementById('renderCanvas');
+            const engine = new BABYLON.Engine(canvas, true);
+            const scene = new BABYLON.Scene(engine);
+            const camera = new BABYLON.ArcRotateCamera('camera', Math.PI / 2, Math.PI / 3, 4, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+            const light = new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
+
+
+            // LED setup
+            const material = new BABYLON.StandardMaterial('material', scene);
+            const led = BABYLON.SceneLoader.ImportMesh('', '/front_end_assets/3dFiles/', 'LED.glb', scene, function (meshes) {
+                meshes[1].material = material;
+                meshes[0].scaling = new BABYLON.Vector3(2, 2, 2);
+                meshes[0].position = new BABYLON.Vector3(2, .5, -1)
+
+            });
+
+            // Button 
+            var outer_btn = BABYLON.MeshBuilder.CreateCylinder("body", { height: .3, diameter: .5 }, scene);
+
+            var button = BABYLON.MeshBuilder.CreateCylinder("body", { height: .1, diameter: .35 }, scene);
+            var buttonMaterial = new BABYLON.StandardMaterial("buttonMaterial", scene);
+            buttonMaterial.diffuseColor = new BABYLON.Color3(0.1, 0.6, 0.9); // Set color
+            button.material = buttonMaterial;
+            button.position = new BABYLON.Vector3(0, .2, 0);
+
+            var parentNode = new BABYLON.TransformNode("parentNode", scene);
+            outer_btn.parent = parentNode;
+            button.parent = parentNode;
+
+            parentNode.rotation.x = BABYLON.Tools.ToRadians(70)
+            parentNode.position = new BABYLON.Vector3(2, -1, 0)
+
+
+            // Animate Button Click
+            var animationBox = new BABYLON.Animation("scale", "scaling", 300, BABYLON.Animation.ANIMATIONTYPE_VECTOR3, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+            var keys = [];
+            keys.push({
+                frame: 0,
+                value: new BABYLON.Vector3(1, 1, 1)
+            });
+            keys.push({
+                frame: 15,
+                value: new BABYLON.Vector3(.8, .8, .8)
+            });
+            keys.push({
+                frame: 30,
+                value: new BABYLON.Vector3(1, 1, 1)
+            });
+            animationBox.setKeys(keys);
+            button.animations.push(animationBox);
+
+            // On button click
+            button.actionManager = new BABYLON.ActionManager(scene);
+            button.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+                BABYLON.ActionManager.OnPickTrigger,
+                function () {
+                    scene.beginAnimation(button, 0, 30, false);
+                    led_value = led_value == 1 ? 0 : 1;  
+                    publishMessage("led_status", led_value);
+                }
+            ));
+
+            var broker = {
+                hostname: "127.0.0.1",
+                port: 9001,
+                clientId: "web_" + Math.random().toString(16).substr(2, 8)
+            };
+
+            var topic = "led_status";
+
+            // MQTT client instance
+            var client = new Paho.MQTT.Client(broker.hostname, broker.port, broker.clientId);
+
+            function onConnect() {
+                console.log("Connected to MQTT broker");
+                client.subscribe(topic);
+                console.log("Subscribed to topic: " + topic);
+            }
+
+            function onFailure(message) {
+                console.log("Connection to MQTT broker failed: " + message.errorMessage);
+            }
+
+            function publishMessage(topic, message) {
+                var mqttMessage = new Paho.MQTT.Message(String(message));
+                mqttMessage.destinationName = topic;
+                client.send(mqttMessage); 
+            }
+
+            function onMessageArrived(message) {
+                if (message.payloadString == "1")
+                    material.diffuseColor = new BABYLON.Color3(0, 1, 0)
+                else
+                    material.diffuseColor = new BABYLON.Color3(1, 0, 0)
+            }
+
+            // Set callback functions
+            client.onConnectionLost = onFailure;
+            client.onMessageArrived = onMessageArrived;
+
+            // Connect to MQTT broker
+            client.connect({
+                onSuccess: onConnect,
+                onFailure: onFailure,
+                useSSL: false,
+                userName: "user1",
+                password: "password"
+            });
+
+            engine.runRenderLoop(function () {
+                scene.render();
+            });
+
+            window.addEventListener('resize', function () {
+                engine.resize();
+            });
+        });
+
+    </script>
+</body>
+
+</html>

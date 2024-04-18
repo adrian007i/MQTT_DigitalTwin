@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Subscriber</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script>
+       
+        var broker = {
+            hostname: "127.0.0.1",
+            port: 9001,
+            clientId: "web_" + Math.random().toString(16).substr(2, 8)
+        };
+ 
+        var topic = "led_status";
+
+        // MQTT client instance
+        var client = new Paho.MQTT.Client(broker.hostname, broker.port, broker.clientId);
+ 
+        function onConnect() {
+            console.log("Connected to MQTT broker");
+            client.subscribe(topic);
+            console.log("Subscribed to topic: " + topic);
+        }
+
+        function onFailure(message) {
+            console.log("Connection to MQTT broker failed: " + message.errorMessage);
+        } 
+
+        function onMessageArrived(message) {
+            console.log("Received message: " + message.payloadString); 
+            document.getElementById("message").innerHTML = "Received message: " + message.payloadString;
+        }
+
+        // Set callback functions
+        client.onConnectionLost = onFailure;
+        client.onMessageArrived = onMessageArrived;
+
+        // Connect to MQTT broker
+        client.connect({
+            onSuccess: onConnect,
+            onFailure: onFailure,
+            useSSL: false,
+            userName: "user1",
+            password: "password"
+        });
+
+    </script>
+</head>
+<body>
+    <h1>MQTT Subscriber</h1>
+    <div id="message"></div>
+</body>
+</html>
