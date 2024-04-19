@@ -1,5 +1,5 @@
 # Digital Twin Platform
-This was developed because the existing AWS digital twin eco-system
+This was developed because the existing AWS digital twin architectured had a couple issues.
 
 ## Issues with AWS Digital Twin
 - Platform was slow, resulting in 4 second delays
